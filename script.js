@@ -80,35 +80,27 @@ navLinks.querySelectorAll('a').forEach(link => {
 });
 
 /* ── ANIMATED COUNTERS ── */
-function animateCounter(el) {
-  const target = el.getAttribute('data-target');
-  const suffix = el.getAttribute('data-suffix') || '';
-  const isNumber = !isNaN(parseFloat(target));
-
-  if (!isNumber) {
-    el.textContent = target;
-    return;
-  }
-
-  const end = parseFloat(target);
-  const duration = 2000;
-  const startTime = performance.now();
-
-  function tick(now) {
-    const elapsed = now - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
-    const current = eased * end;
-
-    if (end >= 100) {
-      el.textContent = Math.floor(current).toLocaleString() + suffix;
+function animateCounter(element, target, duration = 2000, isYears = false) {
+  if (!element) return;
+  let start = 0;
+  const increment = target / (duration / 16);
+  
+  const timer = setInterval(() => {
+    start += increment;
+    if (start >= target) {
+      element.textContent = formatNumber(target, isYears);
+      clearInterval(timer);
     } else {
-      el.textContent = current.toFixed(1) + suffix;
+      element.textContent = formatNumber(Math.floor(start), isYears);
     }
+  }, 16);
+}
 
-    if (progress < 1) requestAnimationFrame(tick);
-  }
-  requestAnimationFrame(tick);
+function formatNumber(num, isYears = false) {
+  if (isYears) return num.toFixed(1) + '+';
+  if (num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + 'M+';
+  if (num >= 1000) return (num / 1000).toFixed(0) + 'K+';
+  return num.toString();
 }
 
 /* ── SCROLL REVEAL + COUNTER TRIGGER ── */
@@ -116,18 +108,25 @@ const revealObserver = new IntersectionObserver((entries) => {
   entries.forEach(entry => {
     if (entry.isIntersecting) {
       entry.target.classList.add('active');
-      // trigger counters within this element
-      entry.target.querySelectorAll('.stat-number[data-target]').forEach(el => {
-        if (!el.classList.contains('counted')) {
-          el.classList.add('counted');
-          animateCounter(el);
-        }
-      });
     }
   });
 }, { threshold: 0.15 });
 
 document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+const statsObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      animateCounter(document.querySelector('#stat-subscribers'), 7600000);
+      animateCounter(document.querySelector('#stat-views'), 747000000);
+      animateCounter(document.querySelector('#stat-years'), 6, 2000, true);
+      statsObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.3 });
+
+const statsSection = document.querySelector('#stats');
+if (statsSection) statsObserver.observe(statsSection);
 
 /* ── HERO TYPING EFFECT ── */
 const heroLines = document.querySelectorAll('.hero-content h1 .type-line');
